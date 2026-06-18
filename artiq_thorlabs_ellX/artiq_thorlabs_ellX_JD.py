@@ -55,60 +55,88 @@ class ThorlabsELLXJD(ThorlabsELLXInterface):
         """Close serial connection."""
         if self.serial and self.serial.is_open:
             self.serial.close()
-
-    async def req_absolute_move(self, val: int) -> Union[str, int]:
-        decoded_val = val / 398
-        cmd = f"move_absolute {decoded_val:f}\n"
+    
+    async def req_home(self, dir: int) -> Union[str, int]:
+        cmd = f"home {dir}"
+        self.log(f"Sending: {cmd}")
         try:
             self.serial.write(cmd.encode("ascii", errors="ignore"))
             self.serial.readline()
             data = self.serial.readline().decode("ascii", errors="ignore")
+            self.log(f"Read: {data}")
             if "PO" in data:
                 return int(data[3:], 16)
         except Exception:
+            self.log("Serial port error!")
+            return str(COMMAND_STATUS.ERR_SERIAL)
+        return data
+
+    async def req_absolute_move(self, val: int) -> Union[str, int]:
+        decoded_val = val / 398
+        cmd = f"move_absolute {decoded_val:f}\n"
+        self.log(f"Sending: {cmd}")
+        try:
+            self.serial.write(cmd.encode("ascii", errors="ignore"))
+            self.serial.readline()
+            data = self.serial.readline().decode("ascii", errors="ignore")
+            self.log(f"Read: {data}")
+            if "PO" in data:
+                return int(data[3:], 16)
+        except Exception:
+            self.log("Serial port error!")
             return str(COMMAND_STATUS.ERR_SERIAL)
         return data
     
     async def req_relative_move(self, val: int) -> Union[str, int]:
         decoded_val = val / 398
         cmd = f"move_relative {decoded_val:f}\n"
+        self.log(f"Sending: {cmd}")
         try:
             self.serial.write(cmd.encode("ascii", errors="ignore"))
             self.serial.readline()
             data = self.serial.readline().decode("ascii", errors="ignore")
+            self.log(f"Read: {data}")
             if "PO" in data:
                 return int(data[3:], 16)
         except Exception:
+            self.log("Serial port error!")
             return str(COMMAND_STATUS.ERR_SERIAL)
         return data
 
     async def forward(self) -> Union[str, int]:
         cmd = f"move_fwd\n"
+        self.log(f"Sending: {cmd}")
         try:
             self.serial.write(cmd.encode("ascii", errors="ignore"))
             self.serial.readline()
             data = self.serial.readline().decode("ascii", errors="ignore")
+            self.log(f"Read: {data}")
             if "PO" in data:
                 return int(data[3:], 16)
         except Exception:
+            self.log("Serial port error!")
             return str(COMMAND_STATUS.ERR_SERIAL)
         return data
     
     async def backward(self) -> Union[str, int]:
         cmd = f"move_bwd\n"
+        self.log(f"Sending: {cmd}")
         try:
             self.serial.write(cmd.encode("ascii", errors="ignore"))
             self.serial.readline()
             data = self.serial.readline().decode("ascii", errors="ignore")
+            self.log(f"Read: {data}")
             if "PO" in data:
                 return int(data[3:], 16)
         except Exception:
+            self.log("Serial port error!")
             return str(COMMAND_STATUS.ERR_SERIAL)
         return data
     
     async def set_jog_step(self, val: int) -> str:
         decoded_val = val / 398
         cmd = f"set_jog_step {decoded_val:f}\n"
+        self.log(f"Sending: {cmd}")
         try:
             self.serial.write(cmd.encode("ascii", errors="ignore"))
             self.serial.read_all()
@@ -118,10 +146,87 @@ class ThorlabsELLXJD(ThorlabsELLXInterface):
     
     async def set_velocity(self, val: int) -> str:
         cmd = f"set_speed {val:i}\n"
+        self.log(f"Sending: {cmd}")
         try:
             self.serial.write(cmd.encode("ascii", errors="ignore"))
             self.serial.read_all()
         except Exception:
+            self.log("Serial port error!")
             return str(COMMAND_STATUS.ERR_SERIAL)
         return str(COMMAND_STATUS.OK)
+    
+    async def get_information(self) -> Union[str, DEVINFO_T]:
+        return str(COMMAND_STATUS.OK.value)
+
+    async def get_status(self) -> Union[str, int]:
+        return str(COMMAND_STATUS.OK.value)
+
+    async def req_save_user_data(self) -> str:
+        return str(COMMAND_STATUS.OK.value)
+
+    async def req_change_address(self, new_addr: int) -> str:
+        return str(COMMAND_STATUS.OK.value)
+
+    async def get_motor_info(self, motor: int) -> Union[str, MOTORINFO_T]:
+        return str(COMMAND_STATUS.OK.value)
+
+    async def set_fwp(self, motor: int, val: int) -> str:
+        return str(COMMAND_STATUS.OK.value)
+
+    async def set_bwp(self, motor: int, val: int) -> str:
+        return str(COMMAND_STATUS.OK.value)
+
+    async def req_search_freq(self, motor: int) -> str:
+        return str(COMMAND_STATUS.OK.value)
+
+    async def req_scan_current_curve(self, motor: int) -> str:
+        return str(COMMAND_STATUS.OK.value)
+
+    async def get_current_curve(self, motor: int) -> Union[str, CURRENT_CURVE_T]:
+        return str(COMMAND_STATUS.OK.value)
+
+    async def isolate_device(self, minutes: int) -> str:
+        return str(COMMAND_STATUS.OK.value)
+
+    async def set_autohoming(self, enable: int) -> Union[str, int]:
+        return str(COMMAND_STATUS.OK.value)
+
+    async def req_home_offset(self) -> Union[str, int]:
+        return str(COMMAND_STATUS.OK.value)
+
+    async def set_home_offset(self, val: int) -> str:
+        return str(COMMAND_STATUS.OK.value)
+
+    async def req_zero_position(self) -> Union[str, int]:
+        return str(COMMAND_STATUS.OK.value)
+
+    async def set_zero_position(self) -> str:
+        return str(COMMAND_STATUS.OK.value)
+
+    async def req_jog_step(self) -> Union[str, int]:
+        return str(COMMAND_STATUS.OK.value)
+
+    async def req_skip_frequency(self) -> str:
+        return str(COMMAND_STATUS.OK.value)
+    
+    async def motion_stop(self) -> str:
+        return str(COMMAND_STATUS.OK.value)
+    
+    async def get_position(self) -> Union[str, int]:
+        return str(COMMAND_STATUS.OK.value)
+
+    async def req_velocity(self) -> Union[str, int]:
+        return str(COMMAND_STATUS.OK.value)
+    
+    async def group_address(self, g_addr: int) -> str:
+        return str(COMMAND_STATUS.OK.value)
+    
+    async def optimize_motors(self) -> str:
+        return str(COMMAND_STATUS.OK.value)
+    
+    async def clean_mechanics(self) -> str:
+        return str(COMMAND_STATUS.OK.value)
+    
+    async def reset_factory_default(self) -> str:
+        return str(COMMAND_STATUS.OK.value)
         
