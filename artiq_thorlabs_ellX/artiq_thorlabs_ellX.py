@@ -203,15 +203,20 @@ class ThorlabsELLX(ThorlabsELLXInterface):
             cmd = [cmd]
         try:
             header = self.serial.read(3)
-            if int(header[0]) != self.dev_addr:
+            self.log(f"Received header: {header.decode()}")
+            if int(header.decode()[0]) != self.dev_addr:
                 return COMMAND_STATUS.ERR_SERIAL
             for c in cmd:
-                if c.value.encode("ascii") == header[1:2] and c in resp_lenghts.keys():
-                    return self.serial.read(resp_lenghts[c]).decode("ascii", errors="ignore")
+                if c.value.encode("ascii") == header[1:3] and c in resp_lenghts.keys():
+                    data = self.serial.read(resp_lenghts[c]+2).decode("ascii", errors="ignore").strip()
+                    return data
         except serial.SerialException:
             self.log(f"Failed to connect to {self.device}")
             return COMMAND_STATUS.ERR_SERIAL
         return COMMAND_STATUS.ERR_CMD
+    
+    def _parse_int(self, data: str) -> int:
+        return struct.unpack(">i", bytes.fromhex(data))[0]
     
     async def get_information(self) -> Union[str, DEVINFO_T]:
         status = self._send_cmd(COMMAND_WORDS.REQ_INFO)
@@ -220,8 +225,8 @@ class ThorlabsELLX(ThorlabsELLXInterface):
         data = self._read_resp(cmd_responses[COMMAND_WORDS.REQ_INFO])
         if type(data) == COMMAND_STATUS:
             return str(data.value)
-        parsed = struct.unpack(">BIHBBHI", bytes.fromhex(data[3:]))
-        return DEVINFO_T(*parsed)
+        parsed = struct.unpack(">BIHBBHI", bytes.fromhex(data))
+        return DEVINFO_T(parsed)
 
     async def get_status(self) -> Union[str, int]:
         status = self._send_cmd(COMMAND_WORDS.REQ_STATUS)
@@ -230,7 +235,7 @@ class ThorlabsELLX(ThorlabsELLXInterface):
         data = self._read_resp(cmd_responses[COMMAND_WORDS.REQ_STATUS])
         if type(data) == COMMAND_STATUS:
             return str(data.value)
-        return int(data[3:], 16)
+        return int(data, 16)
 
     async def req_save_user_data(self) -> str:
         status = self._send_cmd(COMMAND_WORDS.REQ_SAVE_USER_DATA)
@@ -241,16 +246,27 @@ class ThorlabsELLX(ThorlabsELLXInterface):
             return str(data.value)
 
     async def req_change_address(self, new_addr: int) -> str:
-        pass
+        data = f"{new_addr:X}"
+        status = self._send_cmd(COMMAND_WORDS.REQ_CHANGE_ADDRESS, data[0])
+        if status != COMMAND_STATUS.OK:
+            return str(status.value)
+        self.dev_addr = new_addr
+        data = self._read_resp(cmd_responses[COMMAND_WORDS.REQ_CHANGE_ADDRESS])
+        if type(data) == COMMAND_STATUS:
+            return str(data.value)
+        return data
+        # data = self._read_resp(cmd_responses[COMMAND_WORDS.REQ_CHANGE_ADDRESS])
 
     async def get_motor_info(self, motor: int) -> Union[str, MOTORINFO_T]:
-        cmd = COMMAND_WORDS.GET_M1_INFO if motor == 1 else COMMAND_WORDS.GET_M2_INFO
+        cmd = COMMAND_WORDS.REQ_M1_INFO if motor == 1 else COMMAND_WORDS.REQ_M2_INFO
         status = self._send_cmd(cmd)
         if status != COMMAND_STATUS.OK:
             return str(status.value)
         data = self._read_resp(cmd_responses[cmd])
         if type(data) == COMMAND_STATUS:
             return str(data.value)
+        parsed = struct.unpack(">BHHHHH", bytes.fromhex(data))
+        return (parsed[0] & 0xF, parsed[1], parsed[4], parsed[5])
 
     async def set_fwp(self, motor: int, val: int) -> str:
         cmd = COMMAND_WORDS.SET_FWP_M1 if motor == 1 else COMMAND_WORDS.SET_FWP_M2
@@ -304,9 +320,9 @@ class ThorlabsELLX(ThorlabsELLXInterface):
         data = self._read_resp(cmd_responses[COMMAND_WORDS.REQ_HOME])
         if type(data) == COMMAND_STATUS:
             return str(data.value)
-        if len(data[3:]) == 2:
-            return data[3:]
-        return int(data[3:], 16)
+        if len(data) == 2:
+            return data
+        return int(data, 16)
 
     async def set_autohoming(self, enable: int) -> Union[str, int]:
         data = str(enable)
@@ -316,33 +332,33 @@ class ThorlabsELLX(ThorlabsELLXInterface):
         data = self._read_resp(cmd_responses[COMMAND_WORDS.SET_AUTO_HOMING])
         if type(data) == COMMAND_STATUS:
             return str(data.value)
-        if len(data[3:]) == 2:
-            return data[3:]
-        return int(data[3:], 16)
+        if len(data) == 2:
+            return data
+        return int(data, 16)
 
     async def req_absolute_move(self, val: int) -> Union[str, int]:
-        data = struct.pack(">I", val).hex().upper()
+        data = struct.pack(">i", val).hex().upper()
         status = self._send_cmd(COMMAND_WORDS.REQ_MOVE_ABS, data)
         if status != COMMAND_STATUS.OK:
             return str(status.value)
         data = self._read_resp(cmd_responses[COMMAND_WORDS.REQ_MOVE_ABS])
         if type(data) == COMMAND_STATUS:
             return str(data.value)
-        if len(data[3:]) == 2:
-            return data[3:]
-        return int(data[3:], 16)
+        if len(data) == 2:
+            return data
+        return int(data, 16)
 
     async def req_relative_move(self, val: int) -> Union[str, int]:
-        data = struct.pack(">I", val).hex().upper()
+        data = struct.pack(">i", val).hex().upper()
         status = self._send_cmd(COMMAND_WORDS.REQ_MOVE_REL, data)
         if status != COMMAND_STATUS.OK:
             return str(status.value)
         data = self._read_resp(cmd_responses[COMMAND_WORDS.REQ_MOVE_REL])
         if type(data) == COMMAND_STATUS:
             return str(data.value)
-        if len(data[3:]) == 2:
-            return data[3:]
-        return int(data[3:], 16)
+        if len(data) == 2:
+            return data
+        return int(data, 16)
 
     async def req_home_offset(self) -> Union[str, int]:
         status = self._send_cmd(COMMAND_WORDS.REQ_HOME_OFFSET)
@@ -351,7 +367,7 @@ class ThorlabsELLX(ThorlabsELLXInterface):
         data = self._read_resp(cmd_responses[COMMAND_WORDS.REQ_HOME_OFFSET])
         if type(data) == COMMAND_STATUS:
             return str(data.value)
-        return int(data[3:], 16)
+        return self._parse_int(data)
 
     async def set_home_offset(self, val: int) -> str:
         data = struct.pack(">I", val).hex().upper()
@@ -367,7 +383,7 @@ class ThorlabsELLX(ThorlabsELLXInterface):
         data = self._read_resp(cmd_responses[COMMAND_WORDS.REQ_ZERO_POS])
         if type(data) == COMMAND_STATUS:
             return str(data.value)
-        return int(data[3:], 16)
+        return self._parse_int(data)
 
     async def set_zero_position(self) -> str:
         status = self._send_cmd(COMMAND_WORDS.SET_ZERO_POS)
@@ -382,14 +398,12 @@ class ThorlabsELLX(ThorlabsELLXInterface):
         data = self._read_resp(cmd_responses[COMMAND_WORDS.REQ_JOG_STEP_SIZE])
         if type(data) == COMMAND_STATUS:
             return str(data.value)
-        return int(data[3:], 16)
+        return self._parse_int(data)
 
     async def set_jog_step(self, val: int) -> str:
         data = struct.pack(">I", val).hex().upper()
         status = self._send_cmd(COMMAND_WORDS.SET_JOB_STEP_SIZE, data)
-        if status != COMMAND_STATUS.OK:
-            return str(status.value)
-        return status
+        return str(status.value)
 
     async def forward(self) -> Union[str, int]:
         status = self._send_cmd(COMMAND_WORDS.FORWARD)
@@ -398,9 +412,9 @@ class ThorlabsELLX(ThorlabsELLXInterface):
         data = self._read_resp(cmd_responses[COMMAND_WORDS.FORWARD])
         if type(data) == COMMAND_STATUS:
             return str(data.value)
-        if len(data[3:]) == 2:
-            return data[3:]
-        return int(data[3:], 16)
+        if len(data) == 2:
+            return data
+        return self._parse_int(data)
 
     async def backward(self) -> Union[str, int]:
         status = self._send_cmd(COMMAND_WORDS.BACKWARD)
@@ -409,9 +423,9 @@ class ThorlabsELLX(ThorlabsELLXInterface):
         data = self._read_resp(cmd_responses[COMMAND_WORDS.BACKWARD])
         if type(data) == COMMAND_STATUS:
             return str(data.value)
-        if len(data[3:]) == 2:
-            return data[3:]
-        return int(data[3:], 16)
+        if len(data) == 2:
+            return data
+        return self._parse_int(data)
 
     async def req_skip_frequency(self) -> str:
         status = self._send_cmd(COMMAND_WORDS.REQ_SKIP_FREQ)
@@ -438,7 +452,8 @@ class ThorlabsELLX(ThorlabsELLXInterface):
         data = self._read_resp(cmd_responses[COMMAND_WORDS.REQ_POSITION])
         if type(data) == COMMAND_STATUS:
             return str(data.value)
-        return int(data[3:], 16)
+        val = struct.unpack(">i", bytes.fromhex(data))[0]
+        return val
 
     async def req_velocity(self) -> Union[str, int]:
         status = self._send_cmd(COMMAND_WORDS.REQ_VELOCITY)
@@ -447,7 +462,7 @@ class ThorlabsELLX(ThorlabsELLXInterface):
         data = self._read_resp(cmd_responses[COMMAND_WORDS.REQ_VELOCITY])
         if type(data) == COMMAND_STATUS:
             return str(data.value)
-        return int(data[3:], 16)
+        return int(data, 16)
         
 
     async def set_velocity(self, val: int) -> str:
