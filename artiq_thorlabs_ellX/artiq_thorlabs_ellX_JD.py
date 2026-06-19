@@ -98,8 +98,8 @@ class ThorlabsELLXJD(ThorlabsELLXInterface):
             self.log(f"Read: {data}")
             if "PO" in data:
                 return int(data[3:], 16)
-        except Exception:
-            self.log("Serial port error!")
+        except Exception as e:
+            self.log(f"Serial port error! {e}")
             return str(COMMAND_STATUS.ERR_SERIAL)
         return data
 
