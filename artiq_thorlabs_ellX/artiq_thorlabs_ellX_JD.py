@@ -33,6 +33,7 @@ class ThorlabsELLXJD(ThorlabsELLXInterface):
         self.dev_addr = addr
         self.serial: Optional[serial.Serial] = None
         self.device_type = None
+        self.connect()
 
     def log(self, msg: str) -> None:
         print(f"[{self.__class__.__name__}] {msg}")
