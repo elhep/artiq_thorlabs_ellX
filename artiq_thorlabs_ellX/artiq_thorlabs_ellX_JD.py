@@ -95,6 +95,7 @@ class ThorlabsELLXJD(ThorlabsELLXInterface):
         try:
             self.serial.write(cmd.encode("ascii", errors="ignore"))
             self.serial.readline()
+            self.serial.readline()
             data = self.serial.readline().decode("ascii", errors="ignore")
             self.log(f"Read: {data}")
             if "PO" in data:
