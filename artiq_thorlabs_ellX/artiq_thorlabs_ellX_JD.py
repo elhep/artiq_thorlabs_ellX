@@ -307,7 +307,7 @@ class ThorlabsELLXJD(ThorlabsELLXInterface):
     async def set_autohoming(self, enable: int) -> Union[str, int]:
         return COM_STATUS.NOT_IMPLEMENTED.value
 
-    async def req_home_offset(self) -> Union[str, int]:
+    async def get_home_offset(self) -> Union[str, int]:
         return COM_STATUS.NOT_IMPLEMENTED.value
 
     async def set_home_offset(self, val: int) -> int:
