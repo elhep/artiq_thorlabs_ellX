@@ -101,7 +101,6 @@ class ThorlabsELLXJD(ThorlabsELLXInterface):
             self.serial.write(cmd.encode("ascii", errors="ignore"))
             echo = self.serial.readline()
             data = self.serial.readline().decode("ascii", errors="ignore").strip()
-            self.log(f"Echo: {echo}")
             self.log(f"Read: {data}")
             com_status = self._parse_resp_status(data)
             if com_status == COM_STATUS.ABNORMAL_STATUS_VAL:
